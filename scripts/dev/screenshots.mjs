@@ -8,8 +8,20 @@ const OUT = 'docs/screenshots'
 mkdirSync(OUT, { recursive: true })
 
 const browser = await chromium.launch({ channel: 'chrome' })
-const phone = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'es-AR', timezoneId: 'America/Argentina/Buenos_Aires' }
-const desktop = { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1.5, locale: 'es-AR', timezoneId: 'America/Argentina/Buenos_Aires' }
+const phone = {
+  viewport: { width: 390, height: 844 },
+  deviceScaleFactor: 2,
+  isMobile: true,
+  hasTouch: true,
+  locale: 'es-AR',
+  timezoneId: 'America/Argentina/Buenos_Aires',
+}
+const desktop = {
+  viewport: { width: 1280, height: 800 },
+  deviceScaleFactor: 1.5,
+  locale: 'es-AR',
+  timezoneId: 'America/Argentina/Buenos_Aires',
+}
 const shot = (page, name, opts = {}) => page.screenshot({ path: `${OUT}/${name}.png`, ...opts })
 const settle = (page) => page.waitForTimeout(900)
 
@@ -27,12 +39,18 @@ await page.getByRole('button', { name: 'Elegir Tacos al pastor con piña' }).cli
 await page.getByRole('dialog', { name: 'Tacos al pastor con piña' }).waitFor()
 await settle(page)
 await shot(page, 'producto')
-await page.getByRole('dialog', { name: 'Tacos al pastor con piña' }).getByRole('button', { name: /^Sumar · / }).click()
+await page
+  .getByRole('dialog', { name: 'Tacos al pastor con piña' })
+  .getByRole('button', { name: /^Sumar · / })
+  .click()
 await page.getByRole('button', { name: /^Tu bandeja/ }).click()
 await page.getByRole('dialog', { name: 'Tu comanda' }).waitFor()
 await settle(page)
 await shot(page, 'comanda')
-await page.getByRole('dialog', { name: 'Tu comanda' }).getByRole('link', { name: /^Pedir · / }).click()
+await page
+  .getByRole('dialog', { name: 'Tu comanda' })
+  .getByRole('link', { name: /^Pedir · / })
+  .click()
 await page.getByRole('heading', { name: 'Tu pedido' }).waitFor()
 await settle(page)
 await shot(page, 'checkout')
@@ -51,7 +69,10 @@ await shot(page, 'seguimiento')
 
 // Same tab on a tablet-sized window: kitchen board and admin.
 await page.setViewportSize({ width: 1180, height: 820 })
-await page.getByRole('navigation', { name: 'Pantallas de la demo' }).getByRole('link', { name: 'Cocina' }).click()
+await page
+  .getByRole('navigation', { name: 'Pantallas de la demo' })
+  .getByRole('link', { name: 'Cocina' })
+  .click()
 await page.getByLabel('Email').fill('demo@takitho.test')
 await page.getByLabel('Contraseña').fill('demo1234')
 await page.getByRole('button', { name: 'Entrar' }).click()
@@ -59,7 +80,10 @@ await page.getByTestId('kitchen-card').waitFor()
 await page.getByTestId('kitchen-card').getByRole('button', { name: 'Empezar a preparar' }).click()
 await settle(page)
 await shot(page, 'cocina')
-await page.getByRole('navigation', { name: 'Pantallas de la demo' }).getByRole('link', { name: 'Admin' }).click()
+await page
+  .getByRole('navigation', { name: 'Pantallas de la demo' })
+  .getByRole('link', { name: 'Admin' })
+  .click()
 await page.getByRole('heading', { name: 'Resumen', level: 1 }).waitFor()
 await page.getByRole('button', { name: 'Hoy' }).click()
 await settle(page)
