@@ -1,4 +1,5 @@
 import { createBrowserRouter, type RouteObject } from 'react-router'
+import { DemoShell } from './DemoBanner'
 import { CustomerLayout } from './layouts/CustomerLayout'
 import { ErrorPage } from '@/features/errors/ErrorPage'
 import { NotFoundPage } from '@/features/errors/NotFoundPage'
@@ -99,4 +100,4 @@ if (import.meta.env.DEV) {
   })
 }
 
-export const router = createBrowserRouter(routes)
+export const router = createBrowserRouter([{ element: <DemoShell />, children: routes }])

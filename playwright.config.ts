@@ -39,8 +39,14 @@ export default defineConfig({
       name: 'e2e',
       // Flows with two browser pages (kitchen + customer) share one CPU with the build: give them room.
       timeout: 60_000,
-      testIgnore: /a11y\.spec\.ts/,
+      testIgnore: /(a11y|demo)\.spec\.ts/,
       use: { ...devices['Pixel 7'], baseURL: `http://localhost:${PREVIEW_PORT}`, channel: 'chrome' },
+    },
+    {
+      // The portfolio build: no backend at all, everything in the browser.
+      name: 'demo',
+      testMatch: /demo\.spec\.ts/,
+      use: { ...devices['Pixel 7'], baseURL: 'http://localhost:4175', channel: 'chrome' },
     },
   ],
   webServer: [
@@ -55,6 +61,12 @@ export default defineConfig({
       command: `npm run build && npm run preview`,
       env: PUBLIC_ENV,
       url: `http://localhost:${PREVIEW_PORT}`,
+      reuseExistingServer: true,
+      timeout: 180_000,
+    },
+    {
+      command: 'npm run build:demo && npm run preview:demo',
+      url: 'http://localhost:4175',
       reuseExistingServer: true,
       timeout: 180_000,
     },

@@ -7,10 +7,15 @@ import '@/styles/index.css'
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root element')
 
-createRoot(root).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+async function start(container: HTMLElement) {
+  // Portfolio build: swap Supabase for the in-browser backend before anything talks to it (tree-shaken out of real builds).
+  if (import.meta.env.VITE_DEMO === 'true') (await import('@/demo/install')).installDemo()
+  createRoot(container).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+  if (import.meta.env.VITE_DEMO !== 'true') void registerServiceWorker()
+}
 
-void registerServiceWorker()
+void start(root)

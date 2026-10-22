@@ -10,6 +10,7 @@ export default tseslint.config(
       'dist',
       'dist-lh',
       'dist-map',
+      'dist-demo',
       'coverage',
       'playwright-report',
       'test-results',

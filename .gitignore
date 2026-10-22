@@ -16,3 +16,4 @@ supabase/.branches
 supabase/.env*
 dist-lh
 dist-map
+dist-demo

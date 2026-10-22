@@ -39,6 +39,17 @@ Sin proyecto Supabase todavía podés probar todo el flujo con el backend simula
 | `npm run size`                  | presupuesto de bundle (JS de entrada ≤ 165 kB gzip)                     |
 | `npm run check:full`            | todo lo anterior                                                        |
 
+## Modo demo (portafolio, sin servidor)
+
+`npm run build:demo` genera `dist-demo/` con todo corriendo en el navegador: los handlers reales de las Edge Functions y el seed sobre un backend en memoria, sin Supabase, Mercado Pago ni Cloudinary (las fotos son públicas). Se puede pedir, cocinar y administrar en la misma pestaña (los datos viven en la pestaña; recargar los reinicia). Personal: `demo@takitho.test` / `demo1234`. Mercado Pago queda deshabilitado en la demo.
+
+```powershell
+npm run build:demo; npm run preview:demo      # http://localhost:4175
+npm run test:e2e -- --project=demo           # prueba de punta a punta de la demo
+```
+
+Para publicarla en Vercel como proyecto aparte: Build Command `npm run build:demo`, Output Directory `dist-demo`.
+
 ## Lo que tenés que hacer vos (no se puede automatizar)
 
 1. **Supabase** (plan gratis). `npx supabase login`, crear dos proyectos (`takitho-dev`, `takitho-prod`), y en cada uno:
