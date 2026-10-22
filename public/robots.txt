@@ -1,0 +1,9 @@
+# Takitho: the public site (home and menu) is open; ordering, tracking and staff areas are not for search engines.
+User-agent: *
+Allow: /
+Disallow: /checkout
+Disallow: /mis-pedidos
+Disallow: /pedido/
+Disallow: /staff/
+Disallow: /cocina
+Disallow: /admin

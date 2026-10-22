@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Entry JS (gzip)",
+    "path": "dist/assets/index-*.js",
+    "limit": "165 kB",
+    "gzip": true
+  },
+  {
+    "name": "Entry CSS (gzip)",
+    "path": "dist/assets/index-*.css",
+    "limit": "25 kB",
+    "gzip": true
+  }
+]

@@ -1,0 +1,72 @@
+/* Thermal-printer comanda. On screen it does not exist; when printing, only it exists. */
+#print-root {
+  display: none;
+}
+
+@media print {
+  body > #root {
+    display: none !important;
+  }
+
+  body > #print-root {
+    display: block !important;
+    margin: 0 auto;
+    background: #fff;
+    color: #000;
+    font-family: 'Space Mono', ui-monospace, Consolas, monospace;
+    font-size: 11pt;
+    line-height: 1.25;
+  }
+
+  #print-root[data-paper='58'] {
+    width: 48mm;
+    font-size: 9pt;
+  }
+
+  #print-root[data-paper='80'] {
+    width: 72mm;
+  }
+
+  #print-root p {
+    margin: 0 0 1mm;
+    overflow-wrap: anywhere;
+  }
+
+  #print-root hr {
+    border: 0;
+    border-top: 1px dashed #000;
+    margin: 2mm 0;
+  }
+
+  #print-root .pt-brand {
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+  }
+
+  #print-root .pt-code {
+    text-align: center;
+    font-size: 2.2em;
+    font-weight: 700;
+  }
+
+  #print-root .pt-big {
+    font-weight: 700;
+    font-size: 1.15em;
+  }
+
+  #print-root .pt-item {
+    margin-bottom: 2mm;
+    break-inside: avoid;
+  }
+
+  #print-root .pt-mod {
+    padding-left: 4mm;
+  }
+
+  #print-root .pt-note {
+    font-weight: 700;
+    border: 1px solid #000;
+    padding: 0.5mm 1mm;
+  }
+}

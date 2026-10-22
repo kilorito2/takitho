@@ -1,0 +1,146 @@
+/* Motion for the storefront illustration. Colours come from the CSS variables emitted by facadeLiveCss(). */
+.tk-facade {
+  container-type: inline-size;
+  position: relative;
+  line-height: 0;
+}
+.tk-facade svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Awning sways gently; it only needs transform, which keeps it off the main thread. */
+.fx-awning {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: fx-sway 6s ease-in-out infinite alternate;
+}
+@keyframes fx-sway {
+  from {
+    transform: skewX(-0.7deg);
+  }
+  to {
+    transform: skewX(0.7deg);
+  }
+}
+
+/* Papel picado: the outer group follows the scroll (--sway set from JS), the inner one flutters on its own. */
+.fx-flag {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  transform: rotate(calc(var(--sway, 0) * var(--k, 1) * 1deg));
+  transition: transform 150ms linear;
+}
+.fx-flag-idle {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: fx-flutter 2.6s ease-in-out infinite alternate;
+  animation-delay: var(--d, 0s);
+}
+@keyframes fx-flutter {
+  from {
+    transform: rotate(calc(var(--k, 1) * -3deg));
+  }
+  to {
+    transform: rotate(calc(var(--k, 1) * 3deg));
+  }
+}
+
+/* The neon sign flickers once when the lights go down. */
+:root[data-theme='dark'] .fx-night {
+  animation: fx-neon-on 700ms steps(1, end) 1;
+}
+@keyframes fx-neon-on {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.9;
+  }
+  12% {
+    opacity: 0.1;
+  }
+  22% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 0.25;
+  }
+  38%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-awning,
+  .fx-flag-idle {
+    animation: none;
+  }
+  .fx-flag {
+    transform: none;
+  }
+}
+
+/* ---- ABIERTO / CERRADO sign: real 3D flip, positioned over the door glass ---- */
+.tk-open-sign {
+  position: absolute;
+  left: 61.3%;
+  top: 59%;
+  width: 13.6cqw;
+  aspect-ratio: 5 / 3;
+  perspective: 600px;
+  line-height: 1;
+  transform-origin: 50% 0;
+}
+.tk-open-sign::before {
+  /* hanging string */
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -3.2cqw;
+  width: 0.35cqw;
+  height: 3.2cqw;
+  background: var(--color-carbon);
+  transform: translateX(-50%);
+}
+.tk-open-sign__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 300ms var(--ease-spring);
+  transform-origin: 50% 0;
+}
+.tk-open-sign[data-open='false'] .tk-open-sign__inner {
+  transform: rotateY(180deg);
+}
+.tk-open-sign__face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 0.45cqw solid var(--color-carbon);
+  border-radius: 0.9cqw;
+  font-family: var(--font-display);
+  font-size: 2.3cqw;
+  letter-spacing: 0.04em;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0.5cqw 0.5cqw 0 rgb(30 26 23 / 0.55);
+}
+.tk-open-sign__face--open {
+  background: var(--color-nopal);
+  color: var(--color-tortilla);
+}
+.tk-open-sign__face--closed {
+  background: var(--color-chile);
+  color: var(--color-tortilla);
+  transform: rotateY(180deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tk-open-sign__inner {
+    transition: none;
+  }
+}

@@ -1,0 +1,13 @@
+dist
+coverage
+node_modules
+package-lock.json
+docs
+public/brand
+supabase/functions/_shared
+src/types/database.ts
+src/components/illustrations/wordmarkPath.ts
+playwright-report
+test-results
+dist-lh
+dist-map

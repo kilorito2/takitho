@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <script src="/theme-init.js"></script>
+    <title>Takitho · Tacos de barrio, pedí online</title>
+    <meta
+      name="description"
+      content="Pedí tacos, quesabirria y más en Takitho. Retiro en el local, delivery o en tu mesa. Pagás con Mercado Pago, efectivo o transferencia."
+    />
+    <meta name="theme-color" content="#FFF4E0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1E1A17" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+    <meta property="og:type" content="restaurant.restaurant" />
+    <meta property="og:locale" content="es_AR" />
+    <meta property="og:site_name" content="Takitho" />
+    <meta property="og:title" content="Takitho · Tacos de barrio, pedí online" />
+    <meta property="og:description" content="Tacos, quesabirria y más. Retiro, delivery o en tu mesa." />
+    <meta property="og:image" content="/brand/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <div id="root">
+      <!-- Static first paint of the home hero (React replaces it): the page is readable before any script runs. -->
+      <main id="boot" data-for="/">
+        <h1>Tacos de barrio, pedí online</h1>
+        <p>Retiro en el local, delivery o en tu mesa.</p>
+      </main>
+      <main id="boot-checkout" data-for="/checkout">
+        <h1>Tu pedido</h1>
+        <p>Cómo lo querés, cuándo, tus datos y el pago.</p>
+      </main>
+      <main id="boot-orders" data-for="/mis-pedidos">
+        <h1>Mis pedidos</h1>
+        <p>Los guardamos en este celular, sin necesidad de cuenta.</p>
+      </main>
+      <main id="boot-login" data-for="/staff/login">
+        <h1>Entrada del personal</h1>
+        <p>Cocina y administración de Takitho.</p>
+      </main>
+      <main id="boot-menu" data-for="/menu">
+        <h1>El menú de Takitho</h1>
+        <p>Tacos, quesabirria, quesadillas, bebidas y postres.</p>
+      </main>
+    </div>
+    <noscript>Takitho necesita JavaScript para armar tu pedido. Activalo y volvé a intentar.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

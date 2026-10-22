@@ -1,0 +1,854 @@
+{
+  "info": {
+    "name": "Takitho — Edge Functions",
+    "description": "Colección de las Edge Functions de Takitho (docs/API.md). Corré las carpetas en orden: \"create-order\" guarda el código y el token que usan \"get-order\" y \"create-mp-preference\".\n\nVariables: base_url, publishable_key, staff_jwt (admin), mp_webhook_secret. Los pedidos de prueba se crean en el proyecto al que apunte el environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.request.headers.has('Content-Type')) pm.request.headers.add({ key: 'Content-Type', value: 'application/json' })",
+          "if (!pm.request.headers.has('apikey')) pm.request.headers.add({ key: 'apikey', value: pm.environment.get('publishable_key') || '' })"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "idempotency_key",
+      "value": ""
+    },
+    {
+      "key": "order_code",
+      "value": ""
+    },
+    {
+      "key": "order_token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "quote-order",
+      "item": [
+        {
+          "name": "Cotizar un pedido (totales del servidor)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200))",
+                  "const q = pm.response.json()",
+                  "pm.test('el total es la suma de las líneas', () => pm.expect(q.total).to.eql(q.subtotal - q.discount + q.delivery_fee + q.tip))",
+                  "pm.test('trae el estado del local', () => pm.expect(q.store).to.have.property('open'))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/quote-order",
+              "host": ["{{base_url}}"],
+              "path": ["quote-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": \"a0000000-0000-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"modifier_ids\": [\n        \"d0000000-0000-4000-8000-000000000001\",\n        \"d0000000-0000-4000-8000-000000000006\",\n        \"d0000000-0000-4000-8000-000000000010\"\n      ],\n      \"note\": \"sin cebolla porfa\"\n    }\n  ],\n  \"type\": \"pickup\",\n  \"schedule\": {\n    \"mode\": \"asap\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Los precios que manda el cliente se ignoran (A4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200))",
+                  "pm.test('total real, no el falsificado', () => pm.expect(pm.response.json().total).to.be.above(1000))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/quote-order",
+              "host": ["{{base_url}}"],
+              "path": ["quote-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": \"a0000000-0000-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"modifier_ids\": [\n        \"d0000000-0000-4000-8000-000000000001\",\n        \"d0000000-0000-4000-8000-000000000006\",\n        \"d0000000-0000-4000-8000-000000000010\"\n      ],\n      \"note\": \"sin cebolla porfa\",\n      \"price\": 1,\n      \"unit_price\": 1,\n      \"line_total\": 1\n    }\n  ],\n  \"total\": 1,\n  \"subtotal\": 1,\n  \"type\": \"pickup\",\n  \"schedule\": {\n    \"mode\": \"asap\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Producto inexistente → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409))",
+                  "pm.test('código', () => pm.expect(pm.response.json().error.code).to.eql('ITEM_UNAVAILABLE'))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/quote-order",
+              "host": ["{{base_url}}"],
+              "path": ["quote-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"product_id\": \"00000000-0000-4000-8000-000000000000\",\n      \"quantity\": 1,\n      \"modifier_ids\": []\n    }\n  ],\n  \"type\": \"pickup\",\n  \"schedule\": {\n    \"mode\": \"asap\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "create-order",
+      "item": [
+        {
+          "name": "Pedido de retiro en efectivo",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('idempotency_key', crypto.randomUUID ? crypto.randomUUID() : require('uuid').v4())"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 409 STORE_CLOSED es una respuesta válida cuando el local está cerrado a esta hora",
+                  "pm.test('201 creado o 409 cerrado', () => pm.expect([201, 409]).to.include(pm.response.code))",
+                  "if (pm.response.code === 201) {",
+                  "  const r = pm.response.json()",
+                  "  pm.collectionVariables.set('order_code', r.order.code)",
+                  "  pm.collectionVariables.set('order_token', r.order.public_token)",
+                  "  pm.test('arranca en cocina', () => pm.expect(r.order.status).to.eql('received'))",
+                  "  pm.test('no es un replay', () => pm.expect(r.replayed).to.eql(false))",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/create-order",
+              "host": ["{{base_url}}"],
+              "path": ["create-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"{{idempotency_key}}\",\n  \"items\": [\n    {\n      \"product_id\": \"a0000000-0000-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"modifier_ids\": [\n        \"d0000000-0000-4000-8000-000000000001\",\n        \"d0000000-0000-4000-8000-000000000006\",\n        \"d0000000-0000-4000-8000-000000000010\"\n      ],\n      \"note\": \"sin cebolla porfa\"\n    }\n  ],\n  \"type\": \"pickup\",\n  \"schedule\": {\n    \"mode\": \"asap\"\n  },\n  \"customer\": {\n    \"name\": \"Ana Prueba\",\n    \"phone\": \"11 1234-5678\"\n  },\n  \"payment\": {\n    \"method\": \"cash\",\n    \"cash_paid_with\": 50000\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Reintento con la misma clave → mismo pedido (idempotente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('order_code')) {",
+                  "  pm.test('200 replay', () => pm.response.to.have.status(200))",
+                  "  pm.test('mismo código', () => pm.expect(pm.response.json().order.code).to.eql(pm.collectionVariables.get('order_code')))",
+                  "  pm.test('replayed=true', () => pm.expect(pm.response.json().replayed).to.eql(true))",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/create-order",
+              "host": ["{{base_url}}"],
+              "path": ["create-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"{{idempotency_key}}\",\n  \"items\": [\n    {\n      \"product_id\": \"a0000000-0000-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"modifier_ids\": [\n        \"d0000000-0000-4000-8000-000000000001\",\n        \"d0000000-0000-4000-8000-000000000006\",\n        \"d0000000-0000-4000-8000-000000000010\"\n      ],\n      \"note\": \"sin cebolla porfa\"\n    }\n  ],\n  \"type\": \"pickup\",\n  \"schedule\": {\n    \"mode\": \"asap\"\n  },\n  \"customer\": {\n    \"name\": \"Ana Prueba\",\n    \"phone\": \"11 1234-5678\"\n  },\n  \"payment\": {\n    \"method\": \"cash\",\n    \"cash_paid_with\": 50000\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Misma clave con otro carrito → 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('order_code')) {",
+                  "  pm.test('422 clave reutilizada', () => { pm.response.to.have.status(422); pm.expect(pm.response.json().error.code).to.eql('IDEMPOTENCY_KEY_REUSED') })",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/create-order",
+              "host": ["{{base_url}}"],
+              "path": ["create-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"{{idempotency_key}}\",\n  \"items\": [\n    {\n      \"product_id\": \"a0000000-0000-4000-8000-000000000017\",\n      \"quantity\": 1,\n      \"modifier_ids\": []\n    }\n  ],\n  \"type\": \"pickup\",\n  \"schedule\": {\n    \"mode\": \"asap\"\n  },\n  \"customer\": {\n    \"name\": \"Ana Prueba\",\n    \"phone\": \"11 1234-5678\"\n  },\n  \"payment\": {\n    \"method\": \"cash\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Honeypot lleno → éxito falso, no se crea nada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201))",
+                  "pm.test('código falso', () => pm.expect(pm.response.json().order.code).to.eql('TK-0000'))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/create-order",
+              "host": ["{{base_url}}"],
+              "path": ["create-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"11111111-1111-4111-8111-111111111111\",\n  \"website\": \"http://spam.example\",\n  \"items\": [\n    {\n      \"product_id\": \"a0000000-0000-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"modifier_ids\": [\n        \"d0000000-0000-4000-8000-000000000001\",\n        \"d0000000-0000-4000-8000-000000000006\",\n        \"d0000000-0000-4000-8000-000000000010\"\n      ],\n      \"note\": \"sin cebolla porfa\"\n    }\n  ],\n  \"type\": \"pickup\",\n  \"schedule\": {\n    \"mode\": \"asap\"\n  },\n  \"customer\": {\n    \"name\": \"Bot\",\n    \"phone\": \"11 1234-5678\"\n  },\n  \"payment\": {\n    \"method\": \"cash\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Teléfono inválido → 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422))",
+                  "pm.test('VALIDATION_ERROR', () => pm.expect(pm.response.json().error.code).to.eql('VALIDATION_ERROR'))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/create-order",
+              "host": ["{{base_url}}"],
+              "path": ["create-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"22222222-2222-4222-8222-222222222222\",\n  \"items\": [\n    {\n      \"product_id\": \"a0000000-0000-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"modifier_ids\": [\n        \"d0000000-0000-4000-8000-000000000001\",\n        \"d0000000-0000-4000-8000-000000000006\",\n        \"d0000000-0000-4000-8000-000000000010\"\n      ],\n      \"note\": \"sin cebolla porfa\"\n    }\n  ],\n  \"type\": \"pickup\",\n  \"schedule\": {\n    \"mode\": \"asap\"\n  },\n  \"customer\": {\n    \"name\": \"Ana\",\n    \"phone\": \"12345\"\n  },\n  \"payment\": {\n    \"method\": \"cash\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Delivery con Mercado Pago (queda pending_payment)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('mp_idempotency_key', crypto.randomUUID ? crypto.randomUUID() : require('uuid').v4())"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 creado o 409 cerrado', () => pm.expect([201, 409]).to.include(pm.response.code))",
+                  "if (pm.response.code === 201) {",
+                  "  const r = pm.response.json()",
+                  "  pm.collectionVariables.set('mp_order_code', r.order.code)",
+                  "  pm.collectionVariables.set('mp_order_token', r.order.public_token)",
+                  "  pm.test('espera el pago', () => { pm.expect(r.order.status).to.eql('pending_payment'); pm.expect(r.next.action).to.eql('pay_mercado_pago') })",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/create-order",
+              "host": ["{{base_url}}"],
+              "path": ["create-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idempotency_key\": \"33333333-3333-4333-8333-333333333333\",\n  \"items\": [\n    {\n      \"product_id\": \"a0000000-0000-4000-8000-000000000001\",\n      \"quantity\": 2,\n      \"modifier_ids\": [\n        \"d0000000-0000-4000-8000-000000000001\",\n        \"d0000000-0000-4000-8000-000000000006\",\n        \"d0000000-0000-4000-8000-000000000010\"\n      ],\n      \"note\": \"sin cebolla porfa\"\n    }\n  ],\n  \"type\": \"delivery\",\n  \"delivery\": {\n    \"zone_id\": \"e0000000-0000-4000-8000-000000000001\",\n    \"street\": \"Av. Siempreviva\",\n    \"number\": \"742\"\n  },\n  \"schedule\": {\n    \"mode\": \"asap\"\n  },\n  \"customer\": {\n    \"name\": \"Ana Prueba\",\n    \"phone\": \"11 1234-5678\"\n  },\n  \"payment\": {\n    \"method\": \"mercado_pago\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "get-order",
+      "item": [
+        {
+          "name": "Seguimiento con código y token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('order_code')) {",
+                  "  pm.test('200', () => pm.response.to.have.status(200))",
+                  "  const o = pm.response.json()",
+                  "  pm.test('sin datos personales', () => { const t = JSON.stringify(o).toLowerCase(); ['phone','telefono','customer','street'].forEach(k => pm.expect(t).to.not.include(k)) })",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/get-order",
+              "host": ["{{base_url}}"],
+              "path": ["get-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{order_code}}\",\n  \"token\": \"{{order_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Token incorrecto → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('status 404', () => pm.response.to.have.status(404))"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/get-order",
+              "host": ["{{base_url}}"],
+              "path": ["get-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{order_code}}\",\n  \"token\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Código incorrecto → mismo 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('status 404', () => pm.response.to.have.status(404))"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/get-order",
+              "host": ["{{base_url}}"],
+              "path": ["get-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"TK-9999\",\n  \"token\": \"{{order_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "create-mp-preference",
+      "item": [
+        {
+          "name": "Crear el checkout del pedido pendiente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('mp_order_code')) {",
+                  "  pm.test('200 con init_point', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().init_point).to.include('mercadopago') })",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/create-mp-preference",
+              "host": ["{{base_url}}"],
+              "path": ["create-mp-preference"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_code\": \"{{mp_order_code}}\",\n  \"public_token\": \"{{mp_order_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Requiere MP_ACCESS_TOKEN (de PRUEBA) cargado como secret. Devuelve el init_point de sandbox."
+          }
+        },
+        {
+          "name": "Pedido en efectivo no se puede pagar con MP → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('order_code')) { pm.test('ORDER_NOT_PAYABLE', () => { pm.response.to.have.status(409); pm.expect(pm.response.json().error.code).to.eql('ORDER_NOT_PAYABLE') }) }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/create-mp-preference",
+              "host": ["{{base_url}}"],
+              "path": ["create-mp-preference"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_code\": \"{{order_code}}\",\n  \"public_token\": \"{{order_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "mp-webhook (simulado)",
+      "description": "Simula notificaciones de Mercado Pago firmadas con x-signature (HMAC-SHA256 del manifest `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`). El webhook consulta el pago a la API de MP: con un payment_id real del sandbox el pedido pasa a \"received\"; con uno inexistente responde 404/502. Para la prueba determinística usá MP_API_BASE (sandbox) apuntando a un stub.",
+      "item": [
+        {
+          "name": "Firma válida, tópico distinto de payment → 200 ignorado",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const ts = Math.floor(Date.now() / 1000)",
+                  "const requestId = 'postman-' + ts",
+                  "const dataId = '123456'",
+                  "const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`",
+                  "const sig = CryptoJS.HmacSHA256(manifest, pm.environment.get('mp_webhook_secret') || '').toString(CryptoJS.enc.Hex)",
+                  "pm.variables.set('mp_signature', `ts=${ts},v1=${sig}`)",
+                  "pm.variables.set('mp_request_id', requestId)"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200))",
+                  "pm.test('ignorado', () => pm.expect(pm.response.json().ignored).to.eql(true))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-signature",
+                "value": "{{mp_signature}}"
+              },
+              {
+                "key": "x-request-id",
+                "value": "{{mp_request_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mp-webhook?data.id=123456&type=merchant_order",
+              "host": ["{{base_url}}"],
+              "path": ["mp-webhook"],
+              "query": [
+                {
+                  "key": "data.id",
+                  "value": "123456"
+                },
+                {
+                  "key": "type",
+                  "value": "merchant_order"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"type\":\"merchant_order\",\"data\":{\"id\":\"123456\"}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Firma inválida → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401', () => pm.response.to.have.status(401))",
+                  "pm.test('INVALID_SIGNATURE', () => pm.expect(pm.response.json().error.code).to.eql('INVALID_SIGNATURE'))"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-signature",
+                "value": "ts=1,v1=0000000000000000000000000000000000000000000000000000000000000000"
+              },
+              {
+                "key": "x-request-id",
+                "value": "forged"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mp-webhook?data.id=123456&type=payment",
+              "host": ["{{base_url}}"],
+              "path": ["mp-webhook"],
+              "query": [
+                {
+                  "key": "data.id",
+                  "value": "123456"
+                },
+                {
+                  "key": "type",
+                  "value": "payment"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"type\":\"payment\",\"data\":{\"id\":\"123456\"}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Sin firma → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('401', () => pm.response.to.have.status(401))"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/mp-webhook?data.id=123456&type=payment",
+              "host": ["{{base_url}}"],
+              "path": ["mp-webhook"],
+              "query": [
+                {
+                  "key": "data.id",
+                  "value": "123456"
+                },
+                {
+                  "key": "type",
+                  "value": "payment"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "staff (JWT de admin)",
+      "item": [
+        {
+          "name": "cloudinary-sign sin sesión → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('status 401', () => pm.response.to.have.status(401))"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cloudinary-sign",
+              "host": ["{{base_url}}"],
+              "path": ["cloudinary-sign"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"menu\",\n  \"slug\": \"taco-al-pastor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "cloudinary-sign como admin → firma",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.environment.get('staff_jwt')) {",
+                  "  pm.test('200 con firma', () => { pm.response.to.have.status(200); const d = pm.response.json(); pm.expect(d.signature).to.be.a('string'); pm.expect(JSON.stringify(d)).to.not.include('api_secret') })",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{staff_jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cloudinary-sign",
+              "host": ["{{base_url}}"],
+              "path": ["cloudinary-sign"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"menu\",\n  \"slug\": \"taco-al-pastor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Pegá el access token de un admin en la variable staff_jwt del environment."
+          }
+        },
+        {
+          "name": "invite-staff sin sesión → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('status 401', () => pm.response.to.have.status(401))"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invite-staff",
+              "host": ["{{base_url}}"],
+              "path": ["invite-staff"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"cocina@takitho.test\",\n  \"role\": \"kitchen\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": ""
+          }
+        }
+      ]
+    }
+  ]
+}
