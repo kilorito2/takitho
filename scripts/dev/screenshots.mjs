@@ -1,0 +1,73 @@
+// Captures the README screenshots from the demo build. Usage: npm run build:demo && npm run preview:demo, then
+// node scripts/dev/screenshots.mjs   (writes docs/screenshots/*.png)
+import { mkdirSync } from 'node:fs'
+import { chromium } from '@playwright/test'
+
+const BASE = 'http://localhost:4175'
+const OUT = 'docs/screenshots'
+mkdirSync(OUT, { recursive: true })
+
+const browser = await chromium.launch({ channel: 'chrome' })
+const phone = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'es-AR', timezoneId: 'America/Argentina/Buenos_Aires' }
+const desktop = { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1.5, locale: 'es-AR', timezoneId: 'America/Argentina/Buenos_Aires' }
+const shot = (page, name, opts = {}) => page.screenshot({ path: `${OUT}/${name}.png`, ...opts })
+const settle = (page) => page.waitForTimeout(900)
+
+// Customer on a phone: home, menu, product sheet, comanda, checkout, tracking.
+const ctx = await browser.newContext(phone)
+const page = await ctx.newPage()
+await page.goto(`${BASE}/`)
+await settle(page)
+await shot(page, 'home')
+await page.goto(`${BASE}/menu`)
+await page.getByRole('button', { name: 'Elegir Tacos al pastor con piña' }).waitFor()
+await settle(page)
+await shot(page, 'menu')
+await page.getByRole('button', { name: 'Elegir Tacos al pastor con piña' }).click()
+await page.getByRole('dialog', { name: 'Tacos al pastor con piña' }).waitFor()
+await settle(page)
+await shot(page, 'producto')
+await page.getByRole('dialog', { name: 'Tacos al pastor con piña' }).getByRole('button', { name: /^Sumar · / }).click()
+await page.getByRole('button', { name: /^Tu bandeja/ }).click()
+await page.getByRole('dialog', { name: 'Tu comanda' }).waitFor()
+await settle(page)
+await shot(page, 'comanda')
+await page.getByRole('dialog', { name: 'Tu comanda' }).getByRole('link', { name: /^Pedir · / }).click()
+await page.getByRole('heading', { name: 'Tu pedido' }).waitFor()
+await settle(page)
+await shot(page, 'checkout')
+const next = () => page.getByRole('button', { name: 'Siguiente' }).click()
+await next()
+await next()
+await page.getByLabel('Nombre').fill('Ana Pérez')
+await page.getByLabel('WhatsApp').fill('11 1234-5678')
+await next()
+await page.locator('label').filter({ hasText: 'Pagás al recibir o retirar.' }).first().click()
+await next()
+await page.getByRole('button', { name: /^Confirmar pedido/ }).click()
+await page.getByTestId('order-code').waitFor()
+await settle(page)
+await shot(page, 'seguimiento')
+
+// Same tab on a tablet-sized window: kitchen board and admin.
+await page.setViewportSize({ width: 1180, height: 820 })
+await page.getByRole('navigation', { name: 'Pantallas de la demo' }).getByRole('link', { name: 'Cocina' }).click()
+await page.getByLabel('Email').fill('demo@takitho.test')
+await page.getByLabel('Contraseña').fill('demo1234')
+await page.getByRole('button', { name: 'Entrar' }).click()
+await page.getByTestId('kitchen-card').waitFor()
+await page.getByTestId('kitchen-card').getByRole('button', { name: 'Empezar a preparar' }).click()
+await settle(page)
+await shot(page, 'cocina')
+await page.getByRole('navigation', { name: 'Pantallas de la demo' }).getByRole('link', { name: 'Admin' }).click()
+await page.getByRole('heading', { name: 'Resumen', level: 1 }).waitFor()
+await page.getByRole('button', { name: 'Hoy' }).click()
+await settle(page)
+await shot(page, 'admin-resumen')
+await page.getByRole('link', { name: 'Menú' }).click()
+await page.getByRole('button', { name: 'Editar Esquites' }).waitFor()
+await settle(page)
+await shot(page, 'admin-menu')
+await ctx.close()
+await browser.close()
+console.log('screenshots written to', OUT)
